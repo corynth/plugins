@@ -422,11 +422,230 @@ func (p *YourPlugin) longOperation(params map[string]interface{}) (map[string]in
 }
 ```
 
+## Plugin Installation Process
+
+### How Corynth Installs Remote Plugins
+
+When you run `corynth plugin install <plugin-name>`, here's exactly what happens:
+
+#### 1. Repository Configuration
+Corynth automatically configures the official plugin repository:
+```go
+// Default repository added if none configured
+{
+    Name:     "official",
+    URL:      "https://github.com/corynth/plugins", 
+    Branch:   "main",
+    Priority: 1,
+}
+```
+
+#### 2. Plugin Discovery
+Corynth searches for plugins in this order:
+1. **Registry Lookup**: Fetches `registry.json` from GitHub
+   - `https://raw.githubusercontent.com/corynth/plugins/main/registry.json`
+   - `https://raw.githubusercontent.com/corynth/plugins/main/plugins/registry.json`
+
+2. **Repository Clone**: Clones/updates the plugin repository to local cache
+   - Location: `.corynth/cache/repos/official/`
+   - Uses Git with automatic branch tracking
+
+#### 3. Plugin Resolution Priority
+Corynth looks for plugins in this specific order:
+
+1. **JSON Protocol Plugins** (Current approach):
+   ```bash
+   # Plugin located at: official/<plugin-name>/plugin.go
+   # Bash wrapper at: official/<plugin-name>/plugin
+   ```
+
+2. **Compiled .so Files** (Legacy):
+   ```bash
+   # Pre-compiled: corynth-plugin-<name>.so
+   ```
+
+3. **Source Go Files**:
+   ```bash
+   # Root level: <plugin-name>.go
+   # Directory: <plugin-name>/plugin.go
+   ```
+
+#### 4. Installation Process
+
+For our Go JSON protocol plugins:
+```bash
+# 1. Clone repository
+git clone https://github.com/corynth/plugins.git ~/.corynth/cache/repos/official/
+
+# 2. Copy plugin directory
+cp -r official/<plugin-name>/ ~/.corynth/plugins/<plugin-name>/
+
+# 3. Plugin is ready for execution via JSON protocol
+# No compilation needed - uses `go run` via wrapper script
+```
+
+#### 5. Plugin Execution Model
+
+Our plugins use the **JSON stdin/stdout protocol**:
+```bash
+# Metadata command
+./official/http/plugin metadata
+
+# Action execution  
+echo '{"url": "https://api.github.com/user"}' | ./official/http/plugin get
+```
+
+### Installation Commands
+
+#### Install Plugin
+```bash
+# Install from official repository
+corynth plugin install http
+
+# Install with auto-install enabled (default)  
+# Plugin will be automatically installed when first used
+```
+
+#### Discovery and Information
+```bash
+# List all available plugins
+corynth plugin discover
+
+# Search plugins by name/tags
+corynth plugin search docker
+corynth plugin search --tags cloud
+
+# Get detailed plugin info
+corynth plugin info kubernetes
+
+# List installed plugins
+corynth plugin list
+```
+
+#### Plugin Management
+```bash
+# Update plugin to latest version
+corynth plugin update terraform
+
+# Remove installed plugin  
+corynth plugin remove ansible
+
+# Show plugin categories
+corynth plugin categories
+```
+
+### Configuration Options
+
+#### Custom Repository Configuration
+Add to `corynth.hcl`:
+```hcl
+plugins {
+  auto_install = true
+  
+  repository "official" {
+    url      = "https://github.com/corynth/plugins"
+    branch   = "main" 
+    priority = 1
+  }
+  
+  repository "custom" {
+    url      = "https://github.com/yourorg/corynth-plugins"
+    branch   = "main"
+    token    = "your-github-token"  # For private repos
+    priority = 2
+  }
+}
+```
+
+#### Registry Format
+Our registry.json follows this structure:
+```json
+{
+  "version": "2.0.0",
+  "updated": "2025-01-01T00:00:00Z", 
+  "plugins": [
+    {
+      "name": "http",
+      "version": "1.0.0",
+      "description": "HTTP client for REST API calls",
+      "format": "json-protocol",
+      "language": "go",
+      "actions": ["get", "post"],
+      "requirements": {
+        "corynth": ">=1.2.0",
+        "runtime": "go"
+      }
+    }
+  ]
+}
+```
+
+### Troubleshooting Installation
+
+#### Common Issues
+
+1. **Plugin Not Found**:
+   ```bash
+   # Check available plugins
+   corynth plugin discover
+   
+   # Verify repository access
+   curl -s https://raw.githubusercontent.com/corynth/plugins/main/registry.json
+   ```
+
+2. **Installation Failed**:
+   ```bash
+   # Clear plugin cache
+   rm -rf ~/.corynth/cache/
+   
+   # Reinstall with verbose output
+   corynth plugin install <plugin-name> --verbose
+   ```
+
+3. **Permission Issues**:
+   ```bash
+   # Ensure proper permissions
+   chmod +x ~/.corynth/plugins/<plugin-name>/plugin
+   ```
+
+### Plugin Directory Structure After Installation
+```
+~/.corynth/
+├── cache/
+│   └── repos/
+│       └── official/           # Cloned repository
+│           ├── registry.json
+│           └── official/
+│               ├── http/
+│               ├── docker/
+│               └── ...
+└── plugins/                    # Installed plugins (if needed)
+    └── <plugin-name>/
+```
+
+### Development Testing
+
+Test your plugin installation process:
+```bash
+# 1. Test metadata access
+curl -s https://raw.githubusercontent.com/corynth/plugins/main/registry.json | jq '.plugins[] | select(.name=="your-plugin")'
+
+# 2. Test local installation
+cd ~/.corynth/cache/repos/official/official/your-plugin
+./plugin metadata
+./plugin actions
+
+# 3. Test via Corynth
+corynth plugin install your-plugin
+corynth plugin info your-plugin
+```
+
 ## Support and Contribution
 
 - **Issues**: Report bugs via GitHub issues
-- **Discussions**: Use GitHub discussions for questions
+- **Discussions**: Use GitHub discussions for questions  
 - **Contributing**: Follow the contribution guidelines
 - **Bootstrap**: Use the automated bootstrap for consistency
+- **Installation**: Reference this guide for plugin deployment
 
-The Go-first approach ensures that Corynth plugins are fast, secure, and maintainable while providing a consistent development experience across all platforms.
+The Go-first approach ensures that Corynth plugins are fast, secure, and maintainable while providing a consistent development experience across all platforms. The JSON protocol enables language-agnostic execution while maintaining the performance benefits of Go implementation.
