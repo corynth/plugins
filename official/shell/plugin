@@ -1,0 +1,19 @@
+#!/bin/bash
+# Corynth Shell Plugin - Go Implementation Wrapper
+# Executes shell commands and scripts with various interpreters
+
+PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_BINARY="$PLUGIN_DIR/shell-plugin"
+
+# Compile the Go plugin if it doesn't exist or is outdated
+if [[ ! -f "$PLUGIN_BINARY" ]] || [[ "$PLUGIN_DIR/plugin.go" -nt "$PLUGIN_BINARY" ]]; then
+    echo "Compiling Shell plugin..." >&2
+    cd "$PLUGIN_DIR"
+    if ! go build -o shell-plugin plugin.go 2>&1; then
+        echo "Failed to compile Shell plugin" >&2
+        exit 1
+    fi
+fi
+
+# Execute the compiled Go binary with all arguments and stdin
+exec "$PLUGIN_BINARY" "$@"

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Slack Plugin - Workspace messaging and notifications
+# Go implementation wrapper
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_DIR="$SCRIPT_DIR"
+BINARY_NAME="slack-plugin"
+BINARY_PATH="$PLUGIN_DIR/$BINARY_NAME"
+
+# Build the Go binary if it doesn't exist or if source is newer
+if [ ! -f "$BINARY_PATH" ] || [ "$PLUGIN_DIR/plugin.go" -nt "$BINARY_PATH" ]; then
+    echo "Building Slack plugin..." >&2
+    cd "$PLUGIN_DIR"
+    if ! go build -o "$BINARY_NAME" plugin.go; then
+        echo "Error: Failed to build Slack plugin" >&2
+        exit 1
+    fi
+fi
+
+# Execute the Go binary with all arguments and stdin
+exec "$BINARY_PATH" "$@"

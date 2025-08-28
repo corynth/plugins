@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Corynth SQL Plugin - Database operations for SQLite, PostgreSQL, and MySQL
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Initialize go mod if it doesn't exist
+if [ ! -f "$DIR/go.mod" ]; then
+    cd "$DIR"
+    go mod init sql-plugin
+    go get github.com/go-sql-driver/mysql@v1.8.1
+    go get github.com/lib/pq@v1.10.9
+    go get github.com/mattn/go-sqlite3@v1.14.22
+fi
+
+# Build with CGO enabled for SQLite support
+cd "$DIR"
+export CGO_ENABLED=1
+exec go run plugin.go "$@"

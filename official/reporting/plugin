@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Corynth Reporting Plugin - Go Implementation
+# This script compiles and executes the Go plugin for reporting functionality
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_GO="$SCRIPT_DIR/plugin.go"
+PLUGIN_BINARY="$SCRIPT_DIR/reporting-plugin"
+
+# Function to check if plugin needs recompiling
+needs_compilation() {
+    if [[ ! -f "$PLUGIN_BINARY" ]]; then
+        return 0
+    fi
+    
+    if [[ "$PLUGIN_GO" -nt "$PLUGIN_BINARY" ]]; then
+        return 0
+    fi
+    
+    return 1
+}
+
+# Compile the plugin if needed
+if needs_compilation; then
+    echo "Compiling reporting plugin..." >&2
+    go build -o "$PLUGIN_BINARY" "$PLUGIN_GO"
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to compile reporting plugin" >&2
+        exit 1
+    fi
+fi
+
+# Execute the plugin
+exec "$PLUGIN_BINARY" "$@"

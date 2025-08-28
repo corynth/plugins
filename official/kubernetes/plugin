@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Corynth Kubernetes Plugin - Go Implementation
+# This script compiles and runs the Go Kubernetes plugin
+
+set -e
+
+PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_GO="$PLUGIN_DIR/plugin.go"
+PLUGIN_BIN="$PLUGIN_DIR/plugin-bin"
+
+# Check if Go is available
+if ! command -v go &> /dev/null; then
+    echo '{"error": "Go is not installed or not in PATH"}' | jq -c .
+    exit 1
+fi
+
+# Check if kubectl is available
+if ! command -v kubectl &> /dev/null; then
+    echo '{"error": "kubectl is not installed or not in PATH"}' | jq -c .
+    exit 1
+fi
+
+# Compile the Go plugin if source is newer than binary
+if [[ ! -f "$PLUGIN_BIN" ]] || [[ "$PLUGIN_GO" -nt "$PLUGIN_BIN" ]]; then
+    cd "$PLUGIN_DIR"
+    go build -o "$PLUGIN_BIN" "$PLUGIN_GO" 2>/dev/null || {
+        echo '{"error": "Failed to compile Go plugin"}' | jq -c .
+        exit 1
+    }
+fi
+
+# Run the compiled binary with all arguments and stdin
+"$PLUGIN_BIN" "$@"

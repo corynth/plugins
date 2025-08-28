@@ -1,0 +1,257 @@
+{
+  "version": "2.0.0",
+  "updated": "2025-08-28T14:00:00Z",
+  "repository": "https://github.com/corynth/plugins",
+  "note": "Go-first JSON protocol plugins for Corynth workflow orchestration. Production-ready plugins using Go implementations with JSON stdin/stdout communication.",
+  "plugins": [
+    {
+      "name": "docker",
+      "version": "1.0.0",
+      "description": "Docker container operations and image management",
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["docker", "containers", "containerization", "devops"],
+      "actions": [
+        {"name": "run", "description": "Run Docker containers with ports, volumes, env vars"},
+        {"name": "ps", "description": "List containers with filtering"},
+        {"name": "stop", "description": "Stop running containers"},
+        {"name": "start", "description": "Start stopped containers"},
+        {"name": "logs", "description": "Get container logs with tail/follow"},
+        {"name": "exec", "description": "Execute commands in containers"},
+        {"name": "build", "description": "Build Docker images from context"},
+        {"name": "images", "description": "List Docker images"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "system": ["docker"], "runtime": "go"}
+    },
+    {
+      "name": "kubernetes",
+      "version": "1.0.0",
+      "description": "Kubernetes cluster management and resource operations",
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["kubernetes", "k8s", "container", "orchestration", "cloud-native"],
+      "actions": [
+        {"name": "apply", "description": "Apply YAML manifests to cluster"},
+        {"name": "get", "description": "Get resources with selectors and filters"},
+        {"name": "describe", "description": "Detailed resource descriptions"},
+        {"name": "scale", "description": "Scale deployments and replica sets"},
+        {"name": "logs", "description": "Stream pod logs with follow/tail"},
+        {"name": "exec", "description": "Execute commands in pods"},
+        {"name": "port_forward", "description": "Forward local ports to pods"},
+        {"name": "delete", "description": "Delete resources by name or file"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "system": ["kubectl"], "runtime": "go"}
+    },
+    {
+      "name": "aws",
+      "version": "1.0.0", 
+      "description": "Amazon Web Services cloud operations and resource management",
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["aws", "cloud", "ec2", "s3", "lambda", "vpc", "iam", "cloud-native"],
+      "actions": [
+        {"name": "ec2_list", "description": "List EC2 instances with filters"},
+        {"name": "ec2_launch", "description": "Launch EC2 instances with full configuration"},
+        {"name": "ec2_terminate", "description": "Terminate EC2 instances"},
+        {"name": "s3_list", "description": "List S3 buckets and objects"},
+        {"name": "s3_upload", "description": "Upload files to S3 buckets"},
+        {"name": "s3_download", "description": "Download files from S3 buckets"},
+        {"name": "lambda_invoke", "description": "Invoke Lambda functions with payload"},
+        {"name": "lambda_list", "description": "List Lambda functions"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "system": ["aws-cli"], "runtime": "go"}
+    },
+    {
+      "name": "terraform",
+      "version": "1.0.0",
+      "description": "Terraform Infrastructure as Code operations",
+      "author": "Corynth Team", 
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["terraform", "iac", "infrastructure", "cloud", "provisioning"],
+      "actions": [
+        {"name": "init", "description": "Initialize Terraform working directory"},
+        {"name": "plan", "description": "Create execution plan with change analysis"},
+        {"name": "apply", "description": "Apply infrastructure changes"},
+        {"name": "destroy", "description": "Destroy managed infrastructure"},
+        {"name": "validate", "description": "Validate configuration syntax"},
+        {"name": "output", "description": "Extract output values"},
+        {"name": "workspace", "description": "Manage workspaces (list, new, select, delete)"},
+        {"name": "import", "description": "Import existing resources"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "system": ["terraform"], "runtime": "go"}
+    },
+    {
+      "name": "reporting",
+      "version": "1.0.0",
+      "description": "Generate formatted reports with tables, charts, and multiple output formats",
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["reporting", "pdf", "markdown", "tables", "documentation", "output"],
+      "actions": [
+        {"name": "create_report", "description": "Generate reports in MD/HTML/text formats"},
+        {"name": "create_table", "description": "Generate formatted tables"},
+        {"name": "create_chart", "description": "Generate ASCII charts and graphs"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "runtime": "go"}
+    },
+    {
+      "name": "email", 
+      "version": "1.0.0",
+      "description": "Email notifications and communication",
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["email", "smtp", "notifications", "communication"],
+      "actions": [
+        {"name": "send", "description": "Send emails with attachments and HTML support"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "runtime": "go"}
+    },
+    {
+      "name": "slack",
+      "version": "1.0.0", 
+      "description": "Slack workspace messaging and notifications",
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["slack", "messaging", "notifications", "communication"],
+      "actions": [
+        {"name": "message", "description": "Send messages to channels with bot token"},
+        {"name": "webhook", "description": "Send webhook messages"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "runtime": "go"}
+    },
+    {
+      "name": "llm",
+      "version": "1.0.0",
+      "description": "Large Language Model integration with commercial APIs and self-hosted Ollama", 
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["llm", "ai", "gpt", "claude", "ollama", "openai", "anthropic", "generation"],
+      "actions": [
+        {"name": "generate", "description": "Generate text using OpenAI models"},
+        {"name": "chat", "description": "Interactive chat conversations"},
+        {"name": "ollama", "description": "Use local Ollama models"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "runtime": "go"}
+    },
+    {
+      "name": "sql",
+      "version": "1.0.0",
+      "description": "SQL database operations across multiple database types",
+      "author": "Corynth Team", 
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["sql", "database", "query", "sqlite", "postgresql", "mysql"],
+      "actions": [
+        {"name": "query", "description": "Execute SELECT queries with parameters"},
+        {"name": "execute", "description": "Execute INSERT/UPDATE/DELETE statements"},
+        {"name": "schema", "description": "Get table and column schema information"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "runtime": "go"}
+    },
+    {
+      "name": "ansible",
+      "version": "1.0.0",
+      "description": "Ansible configuration management and automation",
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["ansible", "configuration", "automation", "playbook", "devops"],
+      "actions": [
+        {"name": "playbook", "description": "Run Ansible playbooks with inventory and vars"},
+        {"name": "ad_hoc", "description": "Execute ad-hoc Ansible commands"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "system": ["ansible"], "runtime": "go"}
+    },
+    {
+      "name": "calculator",
+      "version": "1.0.0",
+      "description": "Mathematical calculations and unit conversions",
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["math", "calculation", "utility", "converter"],
+      "actions": [
+        {"name": "calculate", "description": "Perform mathematical calculations with precision"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "runtime": "go"}
+    },
+    {
+      "name": "http",
+      "version": "1.0.0",
+      "description": "HTTP client for REST API calls and web requests",
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["http", "web", "api", "rest"],
+      "actions": [
+        {"name": "get", "description": "Make HTTP GET requests with headers"},
+        {"name": "post", "description": "Make HTTP POST requests with JSON data"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "runtime": "go"}
+    },
+    {
+      "name": "file",
+      "version": "1.0.0",
+      "description": "File system operations (read, write, copy, move)",
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["file", "filesystem", "io"],
+      "actions": [
+        {"name": "read", "description": "Read file contents"},
+        {"name": "write", "description": "Write content to files with directory creation"},
+        {"name": "copy", "description": "Copy files and directories"},
+        {"name": "move", "description": "Move or rename files"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "runtime": "go"}
+    },
+    {
+      "name": "shell",
+      "version": "1.0.0",
+      "description": "Execute shell commands and scripts",
+      "author": "Corynth Team",
+      "format": "json-protocol",
+      "installation": "Go executable with JSON stdin/stdout communication",
+      "language": "go",
+      "tags": ["shell", "command", "script", "execution"],
+      "actions": [
+        {"name": "exec", "description": "Execute shell commands with env vars and timeouts"},
+        {"name": "script", "description": "Execute shell scripts with different interpreters"}
+      ],
+      "requirements": {"corynth": ">=1.2.0", "runtime": "go"}
+    }
+  ],
+  "categories": {
+    "Core Infrastructure": ["docker", "kubernetes", "terraform", "ansible"],
+    "Cloud Providers": ["aws"],
+    "Communication": ["email", "slack"],
+    "AI & Analytics": ["llm", "reporting"],
+    "Data & Storage": ["sql", "file"],
+    "System & Network": ["shell", "http"],
+    "Utilities": ["calculator"]
+  },
+  "featured": ["docker", "kubernetes", "aws", "terraform", "llm", "reporting"],
+  "new": ["docker", "kubernetes", "aws", "terraform", "reporting", "email", "slack", "llm", "sql", "ansible"],
+  "popular": ["docker", "kubernetes", "aws", "terraform", "llm", "reporting", "slack", "sql"]
+}

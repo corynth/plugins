@@ -1,0 +1,19 @@
+#!/bin/bash
+# Corynth Calculator Plugin - Go Implementation Wrapper
+# Uses Go's AST parser for safe mathematical expression evaluation
+
+PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_BINARY="$PLUGIN_DIR/calculator-plugin"
+
+# Compile the Go plugin if it doesn't exist or is outdated
+if [[ ! -f "$PLUGIN_BINARY" ]] || [[ "$PLUGIN_DIR/plugin.go" -nt "$PLUGIN_BINARY" ]]; then
+    echo "Compiling Calculator plugin..." >&2
+    cd "$PLUGIN_DIR"
+    if ! go build -o calculator-plugin plugin.go 2>&1; then
+        echo "Failed to compile Calculator plugin" >&2
+        exit 1
+    fi
+fi
+
+# Execute the compiled Go binary with all arguments and stdin
+exec "$PLUGIN_BINARY" "$@"

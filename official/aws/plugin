@@ -1,0 +1,407 @@
+#!/usr/bin/env python3
+"""
+Corynth AWS JSON Protocol Plugin
+Amazon Web Services operations (EC2, S3, Lambda) - Python implementation with boto3
+"""
+import json
+import sys
+import os
+from typing import Dict, Any, List, Optional
+
+try:
+    import boto3
+    from botocore.exceptions import ClientError, NoCredentialsError
+    AWS_AVAILABLE = True
+except ImportError:
+    AWS_AVAILABLE = False
+
+class AWSPlugin:
+    def __init__(self):
+        self.metadata = {
+            "name": "aws",
+            "version": "1.0.0",
+            "description": "Amazon Web Services cloud operations and resource management",
+            "author": "Corynth Team",
+            "tags": ["aws", "cloud", "ec2", "s3", "lambda", "vpc", "iam", "cloud-native"]
+        }
+        self.region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+        self.clients = {}
+    
+    def get_metadata(self) -> Dict[str, Any]:
+        return self.metadata
+    
+    def get_actions(self) -> Dict[str, Any]:
+        return {
+            "ec2_list": {
+                "description": "List EC2 instances with filters",
+                "inputs": {
+                    "region": {"type": "string", "required": False, "description": "AWS region"},
+                    "filters": {"type": "object", "required": False, "description": "Instance filters"},
+                    "state": {"type": "string", "required": False, "description": "Instance state filter"}
+                },
+                "outputs": {
+                    "instances": {"type": "array", "description": "EC2 instances"}
+                }
+            },
+            "ec2_launch": {
+                "description": "Launch EC2 instance with full configuration",
+                "inputs": {
+                    "image_id": {"type": "string", "required": True, "description": "AMI ID"},
+                    "instance_type": {"type": "string", "required": False, "default": "t2.micro", "description": "Instance type"},
+                    "key_name": {"type": "string", "required": False, "description": "Key pair name"},
+                    "security_groups": {"type": "array", "required": False, "description": "Security group IDs"},
+                    "subnet_id": {"type": "string", "required": False, "description": "Subnet ID"},
+                    "user_data": {"type": "string", "required": False, "description": "User data script"},
+                    "count": {"type": "number", "required": False, "default": 1, "description": "Number of instances"},
+                    "region": {"type": "string", "required": False, "description": "AWS region"}
+                },
+                "outputs": {
+                    "instances": {"type": "array", "description": "Launched instances"}
+                }
+            },
+            "ec2_terminate": {
+                "description": "Terminate EC2 instances",
+                "inputs": {
+                    "instance_ids": {"type": "array", "required": True, "description": "Instance IDs to terminate"},
+                    "region": {"type": "string", "required": False, "description": "AWS region"}
+                },
+                "outputs": {
+                    "success": {"type": "boolean", "description": "Termination success"}
+                }
+            },
+            "s3_list": {
+                "description": "List S3 buckets and objects",
+                "inputs": {
+                    "bucket": {"type": "string", "required": False, "description": "Bucket name (list objects) or empty (list buckets)"},
+                    "prefix": {"type": "string", "required": False, "description": "Object prefix filter"}
+                },
+                "outputs": {
+                    "items": {"type": "array", "description": "Buckets or objects"}
+                }
+            },
+            "s3_upload": {
+                "description": "Upload files to S3 buckets",
+                "inputs": {
+                    "bucket": {"type": "string", "required": True, "description": "S3 bucket name"},
+                    "key": {"type": "string", "required": True, "description": "S3 object key"},
+                    "file_path": {"type": "string", "required": True, "description": "Local file path to upload"},
+                    "metadata": {"type": "object", "required": False, "description": "Object metadata"}
+                },
+                "outputs": {
+                    "success": {"type": "boolean", "description": "Upload success"},
+                    "url": {"type": "string", "description": "S3 object URL"}
+                }
+            },
+            "s3_download": {
+                "description": "Download files from S3 buckets",
+                "inputs": {
+                    "bucket": {"type": "string", "required": True, "description": "S3 bucket name"},
+                    "key": {"type": "string", "required": True, "description": "S3 object key"},
+                    "file_path": {"type": "string", "required": True, "description": "Local file path to save"}
+                },
+                "outputs": {
+                    "success": {"type": "boolean", "description": "Download success"}
+                }
+            },
+            "lambda_invoke": {
+                "description": "Invoke Lambda functions with payload",
+                "inputs": {
+                    "function_name": {"type": "string", "required": True, "description": "Lambda function name"},
+                    "payload": {"type": "object", "required": False, "description": "Function payload"},
+                    "invocation_type": {"type": "string", "required": False, "default": "RequestResponse", "description": "Synchronous or Event"},
+                    "region": {"type": "string", "required": False, "description": "AWS region"}
+                },
+                "outputs": {
+                    "response": {"type": "object", "description": "Function response"},
+                    "status_code": {"type": "number", "description": "HTTP status code"}
+                }
+            },
+            "lambda_list": {
+                "description": "List Lambda functions",
+                "inputs": {
+                    "prefix": {"type": "string", "required": False, "description": "Function name prefix"},
+                    "region": {"type": "string", "required": False, "description": "AWS region"}
+                },
+                "outputs": {
+                    "functions": {"type": "array", "description": "Lambda functions"}
+                }
+            }
+        }
+    
+    def execute(self, action: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        if not AWS_AVAILABLE:
+            return {"error": "boto3 not available. Install with: pip install boto3"}
+        
+        try:
+            if action == "ec2_list": return self._ec2_list(params)
+            elif action == "ec2_launch": return self._ec2_launch(params)
+            elif action == "ec2_terminate": return self._ec2_terminate(params)
+            elif action == "s3_list": return self._s3_list(params)
+            elif action == "s3_upload": return self._s3_upload(params)
+            elif action == "s3_download": return self._s3_download(params)
+            elif action == "lambda_invoke": return self._lambda_invoke(params)
+            elif action == "lambda_list": return self._lambda_list(params)
+            else: return {"error": f"Unknown action: {action}"}
+        except NoCredentialsError:
+            return {"error": "AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"}
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def _get_client(self, service: str, region: Optional[str] = None):
+        region = region or self.region
+        client_key = f"{service}_{region}"
+        if client_key not in self.clients:
+            self.clients[client_key] = boto3.client(service, region_name=region)
+        return self.clients[client_key]
+    
+    def _ec2_list(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        region = params.get("region", self.region)
+        ec2 = self._get_client("ec2", region)
+        
+        kwargs = {}
+        if params.get("state"):
+            kwargs["Filters"] = [{"Name": "instance-state-name", "Values": [params["state"]]}]
+        
+        if params.get("filters"):
+            if "Filters" not in kwargs:
+                kwargs["Filters"] = []
+            for key, value in params["filters"].items():
+                kwargs["Filters"].append({"Name": key, "Values": [value] if isinstance(value, str) else value})
+        
+        try:
+            response = ec2.describe_instances(**kwargs)
+            instances = []
+            
+            for reservation in response["Reservations"]:
+                for instance in reservation["Instances"]:
+                    inst = {
+                        "instance_id": instance["InstanceId"],
+                        "instance_type": instance["InstanceType"],
+                        "state": instance["State"]["Name"],
+                        "public_ip": instance.get("PublicIpAddress", ""),
+                        "private_ip": instance.get("PrivateIpAddress", ""),
+                        "launch_time": instance["LaunchTime"].isoformat(),
+                        "tags": {tag["Key"]: tag["Value"] for tag in instance.get("Tags", [])}
+                    }
+                    instances.append(inst)
+            
+            return {"instances": instances}
+        except ClientError as e:
+            return {"error": f"AWS Error: {e.response['Error']['Message']}"}
+    
+    def _ec2_launch(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        region = params.get("region", self.region)
+        ec2 = self._get_client("ec2", region)
+        
+        if not params.get("image_id"):
+            return {"error": "image_id is required"}
+        
+        kwargs = {
+            "ImageId": params["image_id"],
+            "InstanceType": params.get("instance_type", "t2.micro"),
+            "MinCount": params.get("count", 1),
+            "MaxCount": params.get("count", 1)
+        }
+        
+        if params.get("key_name"):
+            kwargs["KeyName"] = params["key_name"]
+        if params.get("security_groups"):
+            kwargs["SecurityGroupIds"] = params["security_groups"]
+        if params.get("subnet_id"):
+            kwargs["SubnetId"] = params["subnet_id"]
+        if params.get("user_data"):
+            kwargs["UserData"] = params["user_data"]
+        
+        try:
+            response = ec2.run_instances(**kwargs)
+            instances = []
+            
+            for instance in response["Instances"]:
+                instances.append({
+                    "instance_id": instance["InstanceId"],
+                    "instance_type": instance["InstanceType"],
+                    "state": instance["State"]["Name"],
+                    "launch_time": instance["LaunchTime"].isoformat()
+                })
+            
+            return {"instances": instances}
+        except ClientError as e:
+            return {"error": f"AWS Error: {e.response['Error']['Message']}"}
+    
+    def _ec2_terminate(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        region = params.get("region", self.region)
+        ec2 = self._get_client("ec2", region)
+        
+        instance_ids = params.get("instance_ids", [])
+        if not instance_ids:
+            return {"error": "instance_ids is required"}
+        
+        try:
+            ec2.terminate_instances(InstanceIds=instance_ids)
+            return {"success": True}
+        except ClientError as e:
+            return {"error": f"AWS Error: {e.response['Error']['Message']}", "success": False}
+    
+    def _s3_list(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        s3 = self._get_client("s3")
+        bucket = params.get("bucket")
+        
+        try:
+            if not bucket:
+                # List buckets
+                response = s3.list_buckets()
+                buckets = []
+                for b in response["Buckets"]:
+                    buckets.append({
+                        "name": b["Name"],
+                        "created_date": b["CreationDate"].isoformat()
+                    })
+                return {"items": buckets}
+            else:
+                # List objects in bucket
+                kwargs = {"Bucket": bucket}
+                if params.get("prefix"):
+                    kwargs["Prefix"] = params["prefix"]
+                
+                response = s3.list_objects_v2(**kwargs)
+                objects = []
+                
+                for obj in response.get("Contents", []):
+                    objects.append({
+                        "key": obj["Key"],
+                        "size": obj["Size"],
+                        "last_modified": obj["LastModified"].isoformat(),
+                        "etag": obj["ETag"].strip('"')
+                    })
+                
+                return {"items": objects}
+                
+        except ClientError as e:
+            return {"error": f"AWS Error: {e.response['Error']['Message']}"}
+    
+    def _s3_upload(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        s3 = self._get_client("s3")
+        
+        bucket = params.get("bucket")
+        key = params.get("key")
+        file_path = params.get("file_path")
+        
+        if not all([bucket, key, file_path]):
+            return {"error": "bucket, key, and file_path are required"}
+        
+        try:
+            extra_args = {}
+            if params.get("metadata"):
+                extra_args["Metadata"] = params["metadata"]
+            
+            s3.upload_file(file_path, bucket, key, ExtraArgs=extra_args if extra_args else None)
+            
+            return {
+                "success": True,
+                "url": f"s3://{bucket}/{key}"
+            }
+        except FileNotFoundError:
+            return {"error": f"File not found: {file_path}", "success": False}
+        except ClientError as e:
+            return {"error": f"AWS Error: {e.response['Error']['Message']}", "success": False}
+    
+    def _s3_download(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        s3 = self._get_client("s3")
+        
+        bucket = params.get("bucket")
+        key = params.get("key")
+        file_path = params.get("file_path")
+        
+        if not all([bucket, key, file_path]):
+            return {"error": "bucket, key, and file_path are required"}
+        
+        try:
+            s3.download_file(bucket, key, file_path)
+            return {"success": True}
+        except ClientError as e:
+            return {"error": f"AWS Error: {e.response['Error']['Message']}", "success": False}
+    
+    def _lambda_invoke(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        region = params.get("region", self.region)
+        lambda_client = self._get_client("lambda", region)
+        
+        function_name = params.get("function_name")
+        if not function_name:
+            return {"error": "function_name is required"}
+        
+        kwargs = {
+            "FunctionName": function_name,
+            "InvocationType": params.get("invocation_type", "RequestResponse")
+        }
+        
+        if params.get("payload"):
+            kwargs["Payload"] = json.dumps(params["payload"])
+        
+        try:
+            response = lambda_client.invoke(**kwargs)
+            
+            result = {
+                "status_code": response["StatusCode"]
+            }
+            
+            if "Payload" in response:
+                payload = response["Payload"].read()
+                if payload:
+                    result["response"] = json.loads(payload.decode())
+                else:
+                    result["response"] = None
+            
+            return result
+        except ClientError as e:
+            return {"error": f"AWS Error: {e.response['Error']['Message']}"}
+    
+    def _lambda_list(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        region = params.get("region", self.region)
+        lambda_client = self._get_client("lambda", region)
+        
+        try:
+            response = lambda_client.list_functions()
+            functions = []
+            prefix = params.get("prefix", "")
+            
+            for func in response["Functions"]:
+                function_name = func["FunctionName"]
+                if not prefix or function_name.startswith(prefix):
+                    functions.append({
+                        "function_name": function_name,
+                        "runtime": func["Runtime"],
+                        "handler": func["Handler"],
+                        "code_size": func["CodeSize"],
+                        "timeout": func["Timeout"],
+                        "memory_size": func["MemorySize"],
+                        "last_modified": func["LastModified"]
+                    })
+            
+            return {"functions": functions}
+        except ClientError as e:
+            return {"error": f"AWS Error: {e.response['Error']['Message']}"}
+
+def main():
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "action required"}))
+        sys.exit(1)
+    
+    action = sys.argv[1]
+    plugin = AWSPlugin()
+    
+    if action == "metadata":
+        result = plugin.get_metadata()
+    elif action == "actions":
+        result = plugin.get_actions()
+    else:
+        try:
+            params_data = sys.stdin.read().strip()
+            params = json.loads(params_data) if params_data else {}
+        except json.JSONDecodeError:
+            params = {}
+        result = plugin.execute(action, params)
+    
+    print(json.dumps(result))
+
+if __name__ == "__main__":
+    main()
