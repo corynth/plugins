@@ -1,8 +1,9 @@
 {
-  "version": "2.0.0",
-  "updated": "2025-08-28T14:00:00Z",
+  "version": "2.1.0",
+  "updated": "2025-08-29T19:50:00Z",
   "repository": "https://github.com/corynth/plugins",
-  "note": "Go-first JSON protocol plugins for Corynth workflow orchestration. Production-ready plugins using Go implementations with JSON stdin/stdout communication.",
+  "releases_url": "https://github.com/corynth/plugins/releases/latest/download",
+  "note": "Pre-compiled binary plugins for Corynth workflow orchestration. Production-ready plugins with native performance and zero dependencies.",
   "plugins": [
     {
       "name": "docker",

@@ -1,0 +1,137 @@
+name: Production Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+  
+permissions:
+  contents: write
+
+jobs:
+  build-plugins:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+    
+    - name: Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "push" ]; then
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Build plugins using Makefile
+      run: |
+        VERSION=${{ steps.version.outputs.version }} make build
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: plugins-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: releases/
+        retention-days: 7
+
+  create-release:
+    needs: build-plugins
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts/
+    
+    - name: Prepare release assets
+      run: |
+        mkdir -p release-assets
+        find artifacts/ -name "corynth-plugin-*" -exec cp {} release-assets/ \;
+        
+        # Create checksums
+        cd release-assets
+        shasum -a 256 * > checksums.txt
+        cd ..
+        
+        # List what we have
+        echo "Release assets:"
+        ls -la release-assets/
+    
+    - name: Create Release
+      uses: actions/create-release@v1
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Corynth Plugins ${{ github.ref }}
+        body: |
+          ## Corynth Plugin Binaries
+          
+          Pre-compiled plugin binaries for Corynth workflow orchestration.
+          
+          ### Usage
+          ```bash
+          corynth plugin install <plugin-name>
+          ```
+          
+          ### Available Plugins
+          - http: HTTP client for REST API calls
+          - file: File system operations 
+          - docker: Docker container operations
+          - kubernetes: Kubernetes cluster management
+          - terraform: Infrastructure as Code
+          - aws: Amazon Web Services operations
+          - slack: Slack messaging
+          - email: Email notifications
+          - sql: Database operations
+          - llm: Large Language Model integration
+          - reporting: Report generation
+          - calculator: Mathematical calculations
+          - ansible: Configuration management
+          - shell: Command execution
+          
+          ### Platform Support
+          - Linux (amd64, arm64)
+          - macOS (amd64, arm64) 
+          - Windows (amd64)
+          
+          Download the appropriate binary for your platform or use `corynth plugin install` to install automatically.
+        draft: false
+        prerelease: false
+    
+    - name: Upload Release Assets
+      run: |
+        for asset in release-assets/*; do
+          if [ -f "$asset" ]; then
+            echo "Uploading $(basename $asset)..."
+            curl \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$asset" \
+              "${{ steps.create_release.outputs.upload_url }}?name=$(basename $asset)"
+          fi
+        done
